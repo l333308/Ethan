@@ -1,0 +1,124 @@
+# 机器人物理参数配置
+robot:
+  name: "humanoid_v1"
+  version: "0.1.0"
+  
+  # 基本尺寸
+  dimensions:
+    height: 0.40  # 米
+    weight: 2.0   # 千克
+    
+  # 自由度配置
+  dof:
+    total: 9  # 初始版本：最小可行配置
+    legs: 8   # 单腿4DOF × 2
+    head: 1   # 俯仰
+    arms: 0   # 第一阶段暂不实现
+
+  # 关节配置
+  joints:
+    # 髋关节（前后）
+    hip_pitch:
+      range: [-45, 90]  # 度
+      max_torque: 35    # kg·cm
+      max_velocity: 60  # 度/秒
+      
+    # 髋关节（左右）
+    hip_roll:
+      range: [-25, 25]
+      max_torque: 35
+      max_velocity: 60
+      
+    # 膝关节
+    knee:
+      range: [0, 120]
+      max_torque: 45
+      max_velocity: 60
+      
+    # 踝关节（前后）
+    ankle_pitch:
+      range: [-30, 30]
+      max_torque: 35
+      max_velocity: 60
+      
+    # 头部
+    head_pitch:
+      range: [-30, 30]
+      max_torque: 20
+      max_velocity: 90
+
+  # 身体部件质量分布（概算）
+  mass_distribution:
+    torso: 0.8      # kg
+    head: 0.15      # kg
+    thigh: 0.15     # kg (单个)
+    calf: 0.12      # kg (单个)
+    foot: 0.08      # kg (单个)
+
+  # 身体部件尺寸
+  link_dimensions:
+    torso:
+      width: 0.10
+      depth: 0.08
+      height: 0.15
+    head:
+      radius: 0.04
+    thigh:
+      length: 0.12
+      radius: 0.015
+    calf:
+      length: 0.10
+      radius: 0.012
+    foot:
+      length: 0.08
+      width: 0.05
+      height: 0.02
+
+# 仿真参数
+simulation:
+  physics:
+    gravity: -9.81
+    time_step: 0.001  # 1ms
+    solver_iterations: 50
+    
+  control:
+    frequency: 100  # Hz
+    mode: "position"  # position / velocity / torque
+    
+  ground:
+    friction: 0.8
+    restitution: 0.1
+    
+# 传感器配置
+sensors:
+  imu:
+    enabled: true
+    frequency: 200  # Hz
+    noise_level: 0.01
+    
+  joint_encoder:
+    enabled: true
+    resolution: 0.1  # 度
+    
+  camera:
+    enabled: false  # 第一阶段不启用
+    
+  force_sensor:
+    enabled: false  # 第一阶段不启用
+
+# 初始姿态
+initial_pose:
+  position: [0, 0, 0.25]  # x, y, z (米)
+  orientation: [0, 0, 0, 1]  # 四元数 (x, y, z, w)
+  
+  # 关节初始角度（度）
+  joint_angles:
+    left_hip_pitch: 0
+    left_hip_roll: 0
+    left_knee: 0
+    left_ankle_pitch: 0
+    right_hip_pitch: 0
+    right_hip_roll: 0
+    right_knee: 0
+    right_ankle_pitch: 0
+    head_pitch: 0
