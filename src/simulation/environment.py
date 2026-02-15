@@ -114,20 +114,39 @@ class SimulationEnvironment:
                 self.joint_names.append(joint_name)
                 
     def _set_initial_pose(self):
-        """设置初始姿态"""
+        """设置初始姿态并启用关节电机
+        
+        注意: resetJointState 只设置初始状态，不会施加力。
+        必须同时调用 setJointMotorControl2 启用位置控制，
+        否则关节在重力下会自由塌陷。
+        """
         joint_angles = self.config['initial_pose']['joint_angles']
         
         for joint_name, angle_deg in joint_angles.items():
             if joint_name in self.joint_indices:
                 joint_idx = self.joint_indices[joint_name]
                 angle_rad = np.deg2rad(angle_deg)
+                
+                # 1. 设置初始关节状态（位置+零速度）
                 p.resetJointState(self.robot_id, joint_idx, angle_rad)
                 
-    def set_joint_positions(self, joint_positions: Dict[str, float]):
+                # 2. 立即启用位置控制电机，防止关节自由塌陷
+                p.setJointMotorControl2(
+                    self.robot_id,
+                    joint_idx,
+                    p.POSITION_CONTROL,
+                    targetPosition=angle_rad,
+                    force=10,  # 与URDF中effort一致
+                    maxVelocity=2.0
+                )
+                
+    def set_joint_positions(self, joint_positions: Dict[str, float],
+                           force: float = 10.0):
         """设置关节位置（位置控制）
         
         Args:
             joint_positions: 关节名称->角度（度）的字典
+            force: 最大力矩（N·m），默认10与URDF effort一致
         """
         for joint_name, angle_deg in joint_positions.items():
             if joint_name in self.joint_indices:
@@ -138,7 +157,8 @@ class SimulationEnvironment:
                     joint_idx,
                     p.POSITION_CONTROL,
                     targetPosition=angle_rad,
-                    force=100  # 最大力矩
+                    force=force,
+                    maxVelocity=2.0
                 )
                 
     def get_joint_states(self) -> Dict[str, Dict[str, float]]:

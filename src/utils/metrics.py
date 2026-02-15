@@ -20,7 +20,8 @@ class StabilityMetrics:
             'pitch': [],
             'yaw': [],
             'position': [],
-            'velocity': []
+            'velocity': [],
+            'joint_torques': []
         }
         
         # 稳定性阈值
@@ -34,13 +35,13 @@ class StabilityMetrics:
         self.start_position = None
         self.current_time = 0
         
-    def update(self, base_state: Dict, joint_states: Dict, imu_data: Dict):
+    def update(self, base_state: Dict, joint_states: Dict = None, imu_data: Dict = None):
         """更新数据
         
         Args:
             base_state: 基座状态
-            joint_states: 关节状态
-            imu_data: IMU数据
+            joint_states: 关节状态（可选）
+            imu_data: IMU数据（可选）
         """
         pos = base_state['position']
         euler = base_state['orientation_euler']
@@ -57,7 +58,96 @@ class StabilityMetrics:
         self.history['position'].append(pos.copy())
         self.history['velocity'].append(np.linalg.norm(vel))
         
+        # 记录关节力矩（如果提供）
+        if joint_states:
+            total_torque = sum(abs(js['torque']) for js in joint_states.values())
+            self.history['joint_torques'].append(total_torque)
+        
         self.current_time += 0.001  # 假设1ms更新
+    
+    def add_measurement(self, position: np.ndarray, orientation: np.ndarray, joint_torques: List = None):
+        """添加测量数据（兼容接口）
+        
+        Args:
+            position: 位置 [x, y, z]
+            orientation: 姿态 [roll, pitch, yaw] (度)
+            joint_torques: 关节力矩列表（可选）
+        """
+        if self.start_position is None:
+            self.start_position = position.copy()
+        
+        self.history['time'].append(self.current_time)
+        self.history['height'].append(position[2])
+        self.history['roll'].append(orientation[0])
+        self.history['pitch'].append(orientation[1])
+        self.history['yaw'].append(orientation[2])
+        self.history['position'].append(position.copy())
+        self.history['velocity'].append(0.0)  # 未提供速度信息
+        
+        if joint_torques:
+            self.history['joint_torques'].append(sum(abs(t) for t in joint_torques))
+        
+        self.current_time += 0.01  # 假设10ms更新
+    
+    def calculate_scores(self) -> Dict:
+        """计算详细评分
+        
+        Returns:
+            包含各项评分的字典
+        """
+        if len(self.history['height']) == 0:
+            return {
+                'total_score': 0.0,
+                'position_score': 0.0,
+                'orientation_score': 0.0,
+                'energy_score': 0.0
+            }
+        
+        # 位置稳定性评分 (35分)
+        height_std = np.std(self.history['height'])
+        positions = np.array(self.history['position'])
+        position_drift = np.linalg.norm(positions[-1][:2] - positions[0][:2])
+        
+        # 高度稳定性 (20分)
+        height_score = max(0, 20 - height_std * 1000)  # 每mm扣1分
+        
+        # 位置漂移 (15分)
+        drift_score = max(0, 15 - position_drift * 30)  # 每cm扣0.3分
+        
+        position_score = height_score + drift_score
+        
+        # 姿态稳定性评分 (35分)
+        roll_std = np.std(self.history['roll'])
+        pitch_std = np.std(self.history['pitch'])
+        
+        # Roll稳定性 (17.5分)
+        roll_score = max(0, 17.5 - roll_std * 2)  # 每度扣2分
+        
+        # Pitch稳定性 (17.5分)
+        pitch_score = max(0, 17.5 - pitch_std * 2)  # 每度扣2分
+        
+        orientation_score = roll_score + pitch_score
+        
+        # 能量效率评分 (30分)
+        if len(self.history['joint_torques']) > 0:
+            avg_torque = np.mean(self.history['joint_torques'])
+            # 理想力矩约为重力补偿值，过高或过低都不好
+            energy_score = max(0, 30 - abs(avg_torque - 10) * 2)
+        else:
+            energy_score = 30.0  # 如果没有力矩数据，给满分
+        
+        total_score = position_score + orientation_score + energy_score
+        
+        return {
+            'total_score': total_score,
+            'position_score': position_score,
+            'orientation_score': orientation_score,
+            'energy_score': energy_score,
+            'height_std': height_std,
+            'position_drift': position_drift,
+            'roll_std': roll_std,
+            'pitch_std': pitch_std
+        }
         
     def is_stable(self) -> bool:
         """判断当前是否稳定
