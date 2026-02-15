@@ -40,7 +40,7 @@ python src/simulation/environment.py  # GUI调试
 ## 🎯 项目目标
 
 - ✅ 准静态站立（第一阶段 - 已完成）
-- ✅ **控制算法开发（第二阶段 - 已完成）**
+- ✅ 控制算法开发（第二阶段 - 已完成）
 - 📅 硬件集成（第三阶段）
 - 📅 智能化（第四阶段）
 
@@ -110,7 +110,7 @@ python tests/test_standing.py --mode basic
 python tests/test_standing_control.py --duration 30
 
 # M2: 原地踏步测试
-python tests/test_stepping.py --duration 20
+python tests/test_stepping.py --duration 30
 
 # M3: 直线行走测试
 python tests/test_walking.py --duration 120
