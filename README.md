@@ -122,7 +122,7 @@ python tests/test_turning.py
 make help
 ```
 
-## 🚀 快速验证第二阶段成果
+## 🚀 快速验证第二阶段成果 
 
 ```bash
 source .venv/bin/activate
